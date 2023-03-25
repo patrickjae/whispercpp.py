@@ -33,7 +33,7 @@ setup(
     ext_modules = cythonize("whispercpp.pyx"),
     include_dirs = ['./whisper.cpp/', numpy.get_include()],
     install_requires=[
-      'numpy',
+      'numpy<1.23.0',
       'ffmpeg-python',
       'requests'
     ],
