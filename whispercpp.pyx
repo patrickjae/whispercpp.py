@@ -5,18 +5,18 @@ import ffmpeg
 import numpy as np
 import requests
 import os
+import json
 from pathlib import Path
 
 MODELS_DIR = str(Path('~/.ggml-models').expanduser())
-print("Saving models to:", MODELS_DIR)
-
 
 cimport numpy as cnp
 
 cdef int SAMPLE_RATE = 16000
 cdef char* TEST_FILE = 'test.wav'
-cdef char* DEFAULT_MODEL = 'tiny'
-cdef char* LANGUAGE = b'fr'
+cdef char* MODEL = 'tiny'
+cdef bytes l_b = os.environ.get('TARGET_LANGUAGE', 'en').encode('utf-8')
+cdef char* LANGUAGE = l_b
 cdef int N_THREADS = os.cpu_count()
 
 MODELS = {
@@ -69,14 +69,19 @@ cdef cnp.ndarray[cnp.float32_t, ndim=1, mode="c"] load_audio(bytes file, int sr 
     return frames
 
 cdef whisper_full_params default_params() nogil:
+    cdef whisper_sampling_strategy strategy = whisper_sampling_strategy.WHISPER_SAMPLING_GREEDY
+    if BEAM_SIZE > 1:
+        strategy = whisper_sampling_strategy.WHISPER_SAMPLING_BEAM_SEARCH
     cdef whisper_full_params params = whisper_full_default_params(
-        whisper_sampling_strategy.WHISPER_SAMPLING_GREEDY
+        strategy
     )
-    params.print_realtime = True
-    params.print_progress = True
-    params.translate = False
-    params.language = <const char *> LANGUAGE
     n_threads = N_THREADS
+    params.translate = False
+    params.print_progress = False
+    params.print_realtime = False
+    params.language = <const char *> LANGUAGE
+    params.beam_search.beam_size = BEAM_SIZE
+    params.beam_search.patience = PATIENCE
     return params
 
 
@@ -84,32 +89,91 @@ cdef class Whisper:
     cdef whisper_context * ctx
     cdef whisper_full_params params
 
-    def __init__(self, model=DEFAULT_MODEL, pb=None):
-        model_fullname = f'ggml-{model}.bin'.encode('utf8')
-        download_model(model_fullname)
-        model_path = Path(MODELS_DIR).joinpath(model_fullname)
+    def __init__(self, model_path=None, model_dir=MODELS_DIR, model_type=MODEL):
+        if not model_path or not os.path.isfile(model_path):
+            print(f'model path not specified or model file not present, downloading {model_type} model')
+            model_fullname = f'ggml-{model_type}.bin'.encode('utf8')
+            download_model(model_fullname)
+            model_path = Path(model_dir).joinpath(model_fullname)
         cdef bytes model_b = str(model_path).encode('utf8')
-        self.ctx = whisper_init(model_b)
-        self.params = default_params()
+        self.ctx = whisper_init_from_file(model_b)
         whisper_print_system_info()
+        self.params = default_params()
 
     def __dealloc__(self):
         whisper_free(self.ctx)
 
-    def transcribe(self, filename=TEST_FILE):
-        print("Loading data..")
+    def transcribe(self, filename=TEST_FILE, result_format='json'):
         cdef cnp.ndarray[cnp.float32_t, ndim=1, mode="c"] frames = load_audio(<bytes>filename)
-
-        print("Transcribing..")
-        return whisper_full(self.ctx, self.params, &frames[0], len(frames))
-    
-    def extract_text(self, int res):
-        print("Extracting text...")
-        if res != 0:
+        status = whisper_full(self.ctx, self.params, &frames[0], len(frames))
+        if status != 0:
             raise RuntimeError
+        return self.extract_result(result_format)
+
+    def transcribe_from_frames(self, cnp.ndarray[cnp.float32_t, ndim=1, mode="c"] frames, result_format='json'):
+        print("Transcribing...")
+        status = whisper_full(self.ctx, self.params, &frames[0], len(frames))
+        if status != 0:
+            raise RuntimeError
+        return self.extract_result(result_format)
+        
+    
+    def extract_result(self, result_format):
         cdef int n_segments = whisper_full_n_segments(self.ctx)
-        return [
-            whisper_full_get_segment_text(self.ctx, i).decode() for i in range(n_segments)
-        ]
-
-
+        cdef int n_tokens
+        if result_format == 'text':
+            return [
+                whisper_full_get_segment_text(self.ctx, i).decode().strip() for i in range(n_segments)
+            ]
+        elif result_format == 'json':
+            result = {
+                'systeminfo': whisper_print_system_info().decode(),
+                'model': {
+                    'type': whisper_model_type_readable(self.ctx),
+                    'multilingual': whisper_is_multilingual(self.ctx),
+                    'vocab': whisper_model_n_vocab(self.ctx),
+                    'audio': {
+                        'ctx': whisper_model_n_audio_ctx(self.ctx),
+                        'state': whisper_model_n_audio_state(self.ctx),
+                        'head': whisper_model_n_audio_head(self.ctx),
+                        'layer': whisper_model_n_audio_layer(self.ctx)
+                    },
+                    'text': {
+                        'ctx': whisper_model_n_text_ctx(self.ctx),
+                        'state': whisper_model_n_text_state(self.ctx),
+                        'head': whisper_model_n_text_head(self.ctx),
+                        'layer': whisper_model_n_text_layer(self.ctx)
+                    },
+                    'mels': whisper_model_n_mels(self.ctx),
+                    'f16': whisper_model_f16(self.ctx),
+                },
+                'params': {
+                    'model': MODEL.decode(),
+                    'language': self.params.language,
+                    'translate': self.params.translate
+                },
+                'result': {
+                    'language': whisper_lang_str(whisper_lang_id(self.params.language)).decode()
+                },
+                'transcription': {
+                    'text': ' '.join([whisper_full_get_segment_text(self.ctx, i).decode().strip() for i in range(n_segments)]),
+                    'segments': []
+                }
+            }
+            for i in range(n_segments):
+                n_tokens = whisper_full_n_tokens(self.ctx, i)
+                av_log_prob = np.mean([np.log(whisper_full_get_token_p(self.ctx, i, j)) for j in range(n_tokens)])
+                s = {
+                    'id': i,
+                    'start': whisper_full_get_segment_t0(self.ctx, i),
+                    'end': whisper_full_get_segment_t1(self.ctx, i),
+                    'text': whisper_full_get_segment_text(self.ctx, i).decode().strip(),
+                    'tokens': [
+                        whisper_full_get_token_id(self.ctx, i, j) for j in range(n_tokens)
+                    ],
+                    'avg_logprob': av_log_prob
+                }
+                result['transcription']['segments'].append(s)
+            return result
+        else:
+            raise RuntimeError(f'Unknown result type {result_format}')
