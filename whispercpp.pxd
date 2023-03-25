@@ -1,6 +1,7 @@
 #!python
 # cython: language_level=3
 from libc.stdint cimport int64_t
+import os
 
 cdef nogil:
     int WHISPER_SAMPLE_RATE = 16000
@@ -10,11 +11,14 @@ cdef nogil:
     int WHISPER_CHUNK_SIZE = 30
     int SAMPLE_RATE = 16000
     char* TEST_FILE = b'test.wav'
-    char* DEFAULT_MODEL = b'ggml-tiny.bin'
-    char* LANGUAGE = b'fr'
+    char* MODEL = b'tiny'
+    char* LANGUAGE = b'en'
+    int BEAM_SIZE = int(os.environ.get('BEAM_SIZE', '1'))
+    int PATIENCE = int(os.environ.get('PATIENCE', '1'))
     ctypedef struct audio_data:
         float* frames;
         int n_frames;
+
 
 cdef extern from "whisper.h" nogil:
     enum whisper_sampling_strategy:
@@ -36,11 +40,10 @@ cdef extern from "whisper.h" nogil:
     ctypedef struct whisper_context:
         pass
     ctypedef struct anon_2:
-        int n_past
-    ctypedef struct anon_3:
-        int n_past
-        int beam_width
         int n_best
+    ctypedef struct anon_3:
+        int beam_size
+        int patience
     ctypedef struct whisper_full_params:
         int strategy
         int n_threads
@@ -71,7 +74,7 @@ cdef extern from "whisper.h" nogil:
         whisper_encoder_begin_callback encoder_begin_callback
         void* encoder_begin_callback_user_data
     whisper_full_params whisper_full_default_params(whisper_sampling_strategy)
-    cdef whisper_context* whisper_init(char*)
+    cdef whisper_context* whisper_init_from_file(char*)
     cdef void whisper_free(whisper_context*)
     cdef int whisper_pcm_to_mel(whisper_context*, float*, int, int)
     cdef int whisper_set_mel(whisper_context*, float*, int, int)
@@ -110,4 +113,18 @@ cdef extern from "whisper.h" nogil:
     cdef float whisper_full_get_token_p(whisper_context*, int, int)
     const char* whisper_print_system_info()
     const char* whisper_full_get_segment_text(whisper_context*, int)
-
+    const char* whisper_model_type_readable(whisper_context*)
+    cdef int whisper_model_n_vocab(whisper_context*)
+    cdef int whisper_model_n_audio_ctx  (whisper_context*);
+    cdef int whisper_model_n_audio_state(whisper_context*);
+    cdef int whisper_model_n_audio_head (whisper_context*);
+    cdef int whisper_model_n_audio_layer(whisper_context*);
+    cdef int whisper_model_n_text_ctx   (whisper_context*);
+    cdef int whisper_model_n_text_state (whisper_context*);
+    cdef int whisper_model_n_text_head  (whisper_context*);
+    cdef int whisper_model_n_text_layer (whisper_context*);
+    cdef int whisper_model_n_mels       (whisper_context*);
+    cdef int whisper_model_f16          (whisper_context*);
+    cdef int whisper_model_type         (whisper_context*);
+    cdef int whisper_lang_id            (const char*);
+    const char* whisper_lang_str        (int);
