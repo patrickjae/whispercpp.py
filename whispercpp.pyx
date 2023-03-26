@@ -8,7 +8,7 @@ import os
 import json
 from pathlib import Path
 
-MODELS_DIR = str(Path('~/.ggml-models').expanduser())
+MODELS_DIR = os.environ.get('MODELS_DIR', str(Path('~/.ggml-models').expanduser()))
 
 cimport numpy as cnp
 
@@ -27,18 +27,18 @@ MODELS = {
     'ggml-large.bin': 'https://huggingface.co/datasets/ggerganov/whisper.cpp/resolve/main/ggml-large.bin',
 }
 
-def model_exists(model):
-    return os.path.exists(Path(MODELS_DIR).joinpath(model))
+def model_exists(target_dir, model_file):
+    return os.path.exists(Path(target_dir).joinpath(model_file))
 
-def download_model(model):
-    if model_exists(model):
+def download_model(target_dir, model_file):
+    if model_exists(target_dir, model_file):
         return
 
-    print(f'Downloading {model}...')
+    print(f'Downloading {model_file}...')
     url = MODELS[model]
     r = requests.get(url, allow_redirects=True)
-    os.makedirs(MODELS_DIR, exist_ok=True)
-    with open(Path(MODELS_DIR).joinpath(model), 'wb') as f:
+    os.makedirs(target_dir, exist_ok=True)
+    with open(Path(target_dir).joinpath(model_file), 'wb') as f:
         f.write(r.content)
 
 
@@ -91,9 +91,9 @@ cdef class Whisper:
 
     def __init__(self, model_path=None, model_dir=MODELS_DIR, model_type=MODEL):
         if not model_path or not os.path.isfile(model_path):
-            print(f'model path not specified or model file not present, downloading {model_type} model')
             model_fullname = f'ggml-{model_type}.bin'.encode('utf8')
-            download_model(model_fullname)
+            print(f'model path not specified or model file not present, downloading {model_type} model (filename: {model_fullname.decode()}) to {model_dir}')
+            download_model(model_dir, model_fullname)
             model_path = Path(model_dir).joinpath(model_fullname)
         cdef bytes model_b = str(model_path).encode('utf8')
         self.ctx = whisper_init_from_file(model_b)
