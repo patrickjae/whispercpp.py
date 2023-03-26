@@ -35,7 +35,7 @@ def download_model(target_dir, model_file):
         return
 
     print(f'Downloading {model_file}...')
-    url = MODELS[model]
+    url = MODELS[model_file]
     r = requests.get(url, allow_redirects=True)
     os.makedirs(target_dir, exist_ok=True)
     with open(Path(target_dir).joinpath(model_file), 'wb') as f:
