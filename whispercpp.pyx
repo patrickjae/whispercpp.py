@@ -45,19 +45,9 @@ def download_model(target_dir, model_file):
 
 cdef cnp.ndarray[cnp.float32_t, ndim=1, mode="c"] load_audio(bytes file, int sr = SAMPLE_RATE):
     try:
-        out = (
-            ffmpeg.input(file, threads=0)
-            .output(
-                "-", format="s16le",
-                acodec="pcm_s16le",
-                ac=1, ar=sr
-            )
-            .run(
-                cmd=["ffmpeg", "-nostdin"],
-                capture_stdout=True,
-                capture_stderr=True
-            )
-        )[0]
+        ffmpeg_cmd = ['ffmpeg', '-i', file.decode(), '-f', 's16le', '-codec', 'pcm_s16le', '-ar', str(sr), '-ac', '1', '-nostdin', '-']
+        ffmpeg_proc = Popen(ffmpeg_cmd, stdout=PIPE)
+        out = ffmpeg_proc.communicate()[0]
     except:
         raise RuntimeError(f"File '{file}' not found")
 
