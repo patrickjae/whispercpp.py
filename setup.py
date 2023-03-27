@@ -42,7 +42,7 @@ setup(
     description='Python bindings for whisper.cpp',
     author='Luke Southam',
     author_email='luke@devthe.com',
-    libraries=[whisper_clib, 'openblas'],
+    libraries=[whisper_clib],
     ext_modules = ext_modules,
     include_dirs = ['./whisper.cpp/', numpy.get_include(), '/usr/include/aarch64-linux-gnu/openblas-pthread/'],
     install_requires=[
