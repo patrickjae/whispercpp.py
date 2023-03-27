@@ -98,7 +98,7 @@ cdef class Whisper:
             model_path = Path(model_dir).joinpath(model_fullname)
         cdef bytes model_b = str(model_path).encode('utf8')
         self.ctx = whisper_init_from_file(model_b)
-        print(whisper_print_system_info().decode(), file=sys.sterr)
+        print(whisper_print_system_info().decode(), file=sys.stderr)
         self.params = default_params()
 
     def __dealloc__(self):
