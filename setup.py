@@ -15,9 +15,12 @@ elif 'x86_64' in detected_platform:
     os.environ['CXXFLAGS'] = '-mavx -mavx2 -mfma -mf16c -O3 -std=c++11'
     os.environ['LDFLAGS']  = '-lopenblas -llapack -lgfortran'
 else: # Graviton2 architecture
-    os.environ['CFLAGS']   = '-DGGML_USE_OPENBLAS -I/usr/local/include/openblas -mcpu=neoverse-n1 -O3 -std=gnu11'
-    os.environ['CXXFLAGS'] = '-DGGML_USE_OPENBLAS -I/usr/local/include/openblas -mcpu=neoverse-n1 -O3 -std=c++11'
+    os.environ['CFLAGS']   = '-mcpu=neoverse-n1 -O3 -std=gnu11'
+    os.environ['CXXFLAGS'] = '-mcpu=neoverse-n1 -O3 -std=c++11'
     os.environ['LDFLAGS']  = '-lopenblas -llapack -lgfortran'
+    # os.environ['CFLAGS']   = '-DGGML_USE_OPENBLAS -I/usr/local/include/openblas -mcpu=neoverse-n1 -O3 -std=gnu11'
+    # os.environ['CXXFLAGS'] = '-DGGML_USE_OPENBLAS -I/usr/local/include/openblas -mcpu=neoverse-n1 -O3 -std=c++11'
+    # os.environ['LDFLAGS']  = '-lopenblas -llapack -lgfortran'
 
 ext_modules = [
     Extension(
