@@ -149,7 +149,7 @@ cdef class Whisper:
                 },
                 'params': {
                     'model': MODEL.decode(),
-                    'language': self.params.language,
+                    'language': whisper_lang_str(whisper_lang_id(self.params.language)).decode(),
                     'translate': self.params.translate
                 },
                 'result': {
