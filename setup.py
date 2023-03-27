@@ -3,17 +3,19 @@ from distutils.extension import Extension
 from Cython.Build import cythonize
 import numpy, os, sys, platform
 
-print(f'detected platform: {platform.platform()}')
+detected_platform = platform.platform()
+print(f'detected platform: {detected_platform}')
 
 if sys.platform == 'darwin':
     os.environ['CFLAGS']   = '-DGGML_USE_ACCELERATE -O3 -std=gnu11'
     os.environ['CXXFLAGS'] = '-DGGML_USE_ACCELERATE -O3 -std=c++11'
     os.environ['LDFLAGS']  = '-framework Accelerate'
+elif 'x86_64' in detected_platform:
+    os.environ['CFLAGS']   = '-mavx -mavx2 -mfma -mf16c -O3 -std=gnu11'
+    os.environ['CXXFLAGS'] = '-mavx -mavx2 -mfma -mf16c -O3 -std=c++11'
 else:
     os.environ['CFLAGS']   = '-mcpu=neoverse-n1 -O3 -std=gnu11'
     os.environ['CXXFLAGS'] = '-mcpu=neoverse-n1 -O3 -std=c++11'
-    # os.environ['CFLAGS']   = '-mavx -mavx2 -mfma -mf16c -O3 -std=gnu11'
-    # os.environ['CXXFLAGS'] = '-mavx -mavx2 -mfma -mf16c -O3 -std=c++11'
 
 ext_modules = [
     Extension(
