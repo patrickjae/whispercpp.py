@@ -1,7 +1,7 @@
 #!python
 # cython: language_level=3
 
-import ffmpeg
+from subprocess import Popen, PIPE
 import numpy as np
 import requests
 import os
