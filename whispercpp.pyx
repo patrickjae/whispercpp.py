@@ -17,7 +17,7 @@ cdef char* TEST_FILE = 'test.wav'
 cdef char* MODEL = 'tiny'
 cdef bytes l_b = os.environ.get('TARGET_LANGUAGE', 'en').encode('utf-8')
 cdef char* LANGUAGE = l_b
-cdef int N_THREADS = os.cpu_count()
+cdef int N_THREADS = os.cpu_count()//2
 
 MODELS = {
     'ggml-tiny.bin': 'https://huggingface.co/datasets/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin',
