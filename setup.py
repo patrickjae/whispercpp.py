@@ -28,7 +28,7 @@ ext_modules = [
         language="c++",
         extra_compile_args=["-std=c++11"],
         library_dirs=['/usr/include/aarch64-linux-gnu/openblas-pthread/'],
-        libraries=['libopenblas']
+        libraries=['openblas']
    )
 ]
 ext_modules = cythonize(ext_modules)
