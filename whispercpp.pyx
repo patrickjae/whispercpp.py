@@ -5,6 +5,7 @@ import ffmpeg
 import numpy as np
 import requests
 import os
+import sys
 import json
 from pathlib import Path
 
@@ -97,7 +98,7 @@ cdef class Whisper:
             model_path = Path(model_dir).joinpath(model_fullname)
         cdef bytes model_b = str(model_path).encode('utf8')
         self.ctx = whisper_init_from_file(model_b)
-        whisper_print_system_info()
+        print(whisper_print_system_info().decode(), file=sys.sterr)
         self.params = default_params()
 
     def __dealloc__(self):
@@ -129,7 +130,7 @@ cdef class Whisper:
             result = {
                 'systeminfo': whisper_print_system_info().decode(),
                 'model': {
-                    'type': whisper_model_type_readable(self.ctx),
+                    'type': whisper_model_type_readable(self.ctx).decode(),
                     'multilingual': whisper_is_multilingual(self.ctx),
                     'vocab': whisper_model_n_vocab(self.ctx),
                     'audio': {
