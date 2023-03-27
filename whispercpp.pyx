@@ -92,8 +92,8 @@ cdef class Whisper:
 
     def __init__(self, model_path=None, model_dir=MODELS_DIR, model_type=MODEL):
         if not model_path or not os.path.isfile(model_path):
-            model_fullname = f'ggml-{model_type}.bin'.encode('utf8')
-            print(f'model path not specified or model file not present, downloading {model_type} model (filename: {model_fullname.decode()}) to {model_dir}')
+            model_fullname = f'ggml-{model_type}.bin'
+            print(f'model path not specified or model file not present, downloading {model_type} model (filename: {model_fullname}) to {model_dir}')
             download_model(model_dir, model_fullname)
             model_path = Path(model_dir).joinpath(model_fullname)
         cdef bytes model_b = str(model_path).encode('utf8')
