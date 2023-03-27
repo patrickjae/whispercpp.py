@@ -27,8 +27,9 @@ ext_modules = [
         sources=["whispercpp.pyx", "whisper.cpp/whisper.cpp"],
         language="c++",
         extra_compile_args=["-std=c++11"],
-        library_dirs=['/usr/include/aarch64-linux-gnu/openblas-pthread/'],
-        libraries=['openblas']
+        library_dirs=['/usr/lib/aarch64-linux-gnu/openblas-pthread/'],
+        libraries=['openblas'],
+        include_dirs=['/usr/include/aarch64-linux-gnu/openblas-pthread/']
    )
 ]
 ext_modules = cythonize(ext_modules)
@@ -41,9 +42,9 @@ setup(
     description='Python bindings for whisper.cpp',
     author='Luke Southam',
     author_email='luke@devthe.com',
-    libraries=[whisper_clib],
-    ext_modules = cythonize("whispercpp.pyx"),
-    include_dirs = ['./whisper.cpp/', numpy.get_include()],
+    libraries=[whisper_clib, 'openblas'],
+    ext_modules = ext_modules,
+    include_dirs = ['./whisper.cpp/', numpy.get_include(), '/usr/include/aarch64-linux-gnu/openblas-pthread/'],
     install_requires=[
       'numpy<1.23.0',
       'requests'
