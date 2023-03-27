@@ -17,8 +17,8 @@ elif 'x86_64' in detected_platform:
 else: # Graviton2 architecture
     # os.environ['CFLAGS']   = '-mcpu=neoverse-n1 -O3 -std=gnu11'
     # os.environ['CXXFLAGS'] = '-mcpu=neoverse-n1 -O3 -std=c++11'
-    os.environ['CFLAGS']   = '-DGGML_USE_OPENBLAS -I/usr/include/aarch64-linux-gnu/openblas-pthread/ -mcpu=neoverse-n1 -O3 -std=gnu11'
-    os.environ['CXXFLAGS'] = '-DGGML_USE_OPENBLAS -I/usr/include/aarch64-linux-gnu/openblas-pthread/ -mcpu=neoverse-n1 -O3 -std=c++11'
+    os.environ['CFLAGS']   = '-DGGML_USE_OPENBLAS -mcpu=neoverse-n1 -O3 -std=gnu11'
+    os.environ['CXXFLAGS'] = '-DGGML_USE_OPENBLAS -mcpu=neoverse-n1 -O3 -std=c++11'
     os.environ['LDFLAGS']  = '-lopenblas -llapack -lgfortran'
 
 ext_modules = [
@@ -27,9 +27,7 @@ ext_modules = [
         sources=["whispercpp.pyx", "whisper.cpp/whisper.cpp"],
         language="c++",
         extra_compile_args=["-std=c++11"],
-        library_dirs=['/usr/lib/aarch64-linux-gnu/openblas-pthread/'],
         libraries=['openblas'],
-        include_dirs=['/usr/include/aarch64-linux-gnu/openblas-pthread/']
    )
 ]
 ext_modules = cythonize(ext_modules)
@@ -44,7 +42,7 @@ setup(
     author_email='luke@devthe.com',
     libraries=[whisper_clib],
     ext_modules = ext_modules,
-    include_dirs = ['./whisper.cpp/', numpy.get_include(), '/usr/include/aarch64-linux-gnu/openblas-pthread/'],
+    include_dirs = ['./whisper.cpp/', numpy.get_include()],
     install_requires=[
       'numpy<1.23.0',
       'requests'
